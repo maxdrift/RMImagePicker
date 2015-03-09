@@ -1,0 +1,14 @@
+PODS:
+  - RMImagePicker (0.1.0)
+
+DEPENDENCIES:
+  - RMImagePicker (from `../`)
+
+EXTERNAL SOURCES:
+  RMImagePicker:
+    :path: ../
+
+SPEC CHECKSUMS:
+  RMImagePicker: c037e10358c6402cc907c2e2d121c306e53138a3
+
+COCOAPODS: 0.36.0.rc.1
