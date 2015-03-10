@@ -10,7 +10,8 @@ import UIKit
 import Photos
 
 let albumCellIdentifier = "albumCellId"
-let albumRowHeigth = CGFloat(70.0)
+let assetsInPosterImage: Int = 3
+let albumRowHeigth = CGFloat(86.5)
 
 
 protocol RMAssetSelectionDelegate {
@@ -22,7 +23,7 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
     var assetsParent: RMAssetSelectionDelegate?
     lazy var imageManager = PHCachingImageManager.defaultManager()
     var collectionsFetchResult: PHFetchResult!
-    var keyAssets: [[UIImage]] = []
+    var posterImages: [UIImage] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -41,7 +42,6 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
         phFetchOptions.predicate = NSPredicate(format: "estimatedAssetCount > 0")
         self.collectionsFetchResult = PHAssetCollection.fetchAssetCollectionsWithType(PHAssetCollectionType.Album, subtype: PHAssetCollectionSubtype.Any, options: phFetchOptions)
 
-        
     }
 
     func cancelImagePicker() {
@@ -73,13 +73,40 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier(albumCellIdentifier, forIndexPath: indexPath) as UITableViewCell
 
+        // Increment the cell's tag
+        let currentTag = cell.tag + 1
+        cell.tag = currentTag
+
         // Configure the cell...
         var localizedTitle: String
+        var assets: PHFetchResult
         if indexPath.row == 0 {
+            assets = PHAsset.fetchAssetsWithOptions(nil)
             localizedTitle = NSLocalizedString("Camera Roll", comment: "")
         } else {
             let collection: PHAssetCollection! = self.collectionsFetchResult[indexPath.row - 1] as PHAssetCollection
+            assets = PHAsset.fetchKeyAssetsInAssetCollection(collection, options: nil)
             localizedTitle = collection.localizedTitle
+        }
+        let requestOptions = PHImageRequestOptions()
+        requestOptions.synchronous = true
+        var keyImages: [UIImage] = []
+        assets.enumerateObjectsUsingBlock({ (asset, idx, stop) -> Void in
+            if idx > 1 {
+                stop.memory = true
+            }
+            self.imageManager.requestImageForAsset(
+                asset as PHAsset,
+                targetSize: CGSizeMake(70, 70),
+                contentMode: PHImageContentMode.AspectFit,
+                options: requestOptions,
+                resultHandler: { (image, info) -> Void in
+                    keyImages.append(image)
+            })
+        })
+        //  Only update the thumbnail if the cell tag hasn't changed. Otherwise, the cell has been re-used.
+        if (cell.tag == currentTag) {
+            cell.imageView!.image = self.mergeImages(keyImages, toImageWithSize: CGSizeMake(69.5, 73.5), andOffset: 2)
         }
         cell.textLabel?.text = localizedTitle
         cell.accessoryType = UITableViewCellAccessoryType.DisclosureIndicator
@@ -118,17 +145,25 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
 // MARK: - Utility
 
     func mergeImages(images: [UIImage!], toImageWithSize size: CGSize, andOffset offset: CGFloat) -> UIImage! {
-        UIGraphicsBeginImageContext(size)
-        var idxDec: CGFloat = CGFloat(images.count)
+        UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
+
+        var idxDec: CGFloat = CGFloat(images.count - 1)
         var idxInc: CGFloat = 0
         for img in images.reverse() {
-            let newOrigin = CGPoint(x: idxDec * offset, y: idxInc * offset)
-            let newWidth = size.width - (offset * 2 * idxDec)
+            let newOrigin = CGPoint(x: idxDec * offset, y: idxInc * offset + 0.5)
+            let newWidth = size.width - (offset * 2 * idxDec) - 0.5
             let newSize = CGSize(
                 width: newWidth,
                 height: newWidth
             )
-            img.drawInRect(CGRect(origin: newOrigin, size: newSize))
+            let rect = CGRect(origin: newOrigin, size: newSize)
+            img.drawInRect(rect)
+
+            let context = UIGraphicsGetCurrentContext();
+            CGContextSetShouldAntialias(context, false)
+            CGContextSetStrokeColorWithColor(context, UIColor.whiteColor().CGColor)
+            CGContextStrokeRectWithWidth(context, rect, 0.5)
+            CGContextSetShouldAntialias(context, true)
             idxInc++
             idxDec--
         }
@@ -138,5 +173,5 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
 
         return mergedImage
     }
-    
+
 }
