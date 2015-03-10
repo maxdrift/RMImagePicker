@@ -8,15 +8,24 @@
 
 import UIKit
 
+private let SelectedOverlayImg = UIImage(
+    named: "tick_selected",
+    inBundle: NSBundle(forClass: RMImagePickerController.self),
+    compatibleWithTraitCollection: nil)
+private let DeselectedOverlayImg = UIImage(
+    named: "tick_deselected",
+    inBundle: NSBundle(forClass: RMImagePickerController.self),
+    compatibleWithTraitCollection: nil)
+
 class RMAssetCell: UICollectionViewCell {
     lazy var imageView = UIImageView()
     lazy var overlayView = UIImageView()
     override var selected: Bool {
         didSet {
             if selected {
-                self.overlayView.image = UIImage(named: "tick_selected")
+                self.overlayView.image = SelectedOverlayImg
             } else {
-                self.overlayView.image = UIImage(named: "tick_deselected")
+                self.overlayView.image = DeselectedOverlayImg
             }
         }
     }
@@ -27,6 +36,7 @@ class RMAssetCell: UICollectionViewCell {
         self.contentView.addSubview(self.imageView)
         self.overlayView.frame = self.bounds
         self.contentView.addSubview(self.overlayView)
+        self.selected = false
     }
 
     required init(coder aDecoder: NSCoder) {
