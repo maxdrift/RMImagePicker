@@ -14,12 +14,13 @@
   },
   "social_media_url": "https://twitter.com/maxdrift",
   "platforms": {
-    "ios": "8.0"
+    "ios": "8.1"
   },
   "source_files": "Source/*.swift",
   "resources": [
     "Source/RMImages.xcassets/tick_selected.imageset/*.png",
-    "Source/RMImages.xcassets/tick_deselected.imageset/*.png"
+    "Source/RMImages.xcassets/tick_deselected.imageset/*.png",
+    "Source/*.xib"
   ],
   "requires_arc": true,
   "frameworks": "Photos"

@@ -9,6 +9,6 @@ EXTERNAL SOURCES:
     :path: ../
 
 SPEC CHECKSUMS:
-  RMImagePicker: ef2d769929b3b401ef4a9a81b7f16286cde2e43c
+  RMImagePicker: a2f824d1cf2474fc970584aa0c186c1f9219beb3
 
-COCOAPODS: 0.36.0.rc.1
+COCOAPODS: 0.36.0

@@ -188,6 +188,7 @@
 				TargetAttributes = {
 					0931AD921AADFA68004364FD = {
 						CreatedOnToolsVersion = 6.1.1;
+						DevelopmentTeam = GB5V65H7X2;
 					};
 					0931ADA71AADFA68004364FD = {
 						CreatedOnToolsVersion = 6.1.1;
@@ -414,7 +415,9 @@
 			baseConfigurationReference = 3F1C108D5D01F45EBBE45BC8 /* Pods-RMImagePickerExample.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = RMImagePickerExample/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -425,7 +428,9 @@
 			baseConfigurationReference = E815BAC3B93FF1E9620B2B18 /* Pods-RMImagePickerExample.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = RMImagePickerExample/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

@@ -1,6 +1,6 @@
 //
 //  RMAssetCollectionPicker.swift
-//  iSafariClient
+//  RMImagePicker
 //
 //  Created by Riccardo Massari on 25/01/15.
 //  Copyright (c) 2015 Riccardo Massari. All rights reserved.
@@ -40,7 +40,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
     var assetsParent: RMAssetSelectionDelegate?
     var imageManager: PHCachingImageManager!
     var assetsFetchResult: PHFetchResult!
-    var assetsCollection: PHAssetCollection!
+    var assetCollection: PHAssetCollection!
     var baseNavigationTitle = ""
     var selectedAssetsNumber: Int! {
         didSet {
@@ -69,6 +69,8 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         super.init(coder: aDecoder)
     }
 
+
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -87,11 +89,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
             action: "doneAction:"
         )
         self.navigationItem.rightBarButtonItem = doneButtonItem
-        if let collection = self.assetsCollection {
-            self.baseNavigationTitle = collection.localizedTitle
-        } else {
-            self.baseNavigationTitle = NSLocalizedString("Camera Roll", comment: "")
-        }
+        self.baseNavigationTitle = self.assetCollection.localizedTitle
         self.selectedAssetsNumber = 0
 
         self.navigationController?.setToolbarHidden(false, animated: true)
@@ -150,6 +148,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         cell.tag = currentTag
 
         let asset: PHAsset! = self.assetsFetchResult[indexPath.item] as PHAsset
+
         self.imageManager.requestImageForAsset(
             asset,
             targetSize: AssetGridThumbnailSize,
@@ -160,26 +159,14 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
                 if (cell.tag == currentTag) {
                     cell.imageView.image = result
                     if cell.selected {
-                        cell.overlayView.image = UIImage(named: "tick_selected")
+                        cell.overlayView.image = SelectedOverlayImg
                     } else {
-                        cell.overlayView.image = UIImage(named: "tick_deselected")
+                        cell.overlayView.image = DeselectedOverlayImg
                     }
                 }
 
             }
         )
-//        self.imageManager.requestImageDataForAsset(
-//            asset,
-//            options: nil,
-//            resultHandler: { (imageData, dataUTI, orientation, info) in
-//                // Only update the thumbnail if the cell tag hasn't changed. Otherwise, the cell has been re-used.
-//                if (cell.tag == currentTag) {
-//                    let completePathURL: NSURL = info["PHImageFileURLKey"] as NSURL
-//                    println(completePathURL.lastPathComponent)
-//                }
-//
-//            }
-//        )
         return cell
     }
 

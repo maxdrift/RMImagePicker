@@ -12,13 +12,14 @@ Pod::Spec.new do |s|
   s.source           = { :git => "https://github.com/maxdrift/RMImagePicker.git", :tag => s.version.to_s }
   s.social_media_url = 'https://twitter.com/maxdrift'
 
-  s.platform = :ios, '8.0'
-  s.ios.deployment_target = "8.0"
+  s.platform = :ios, '8.1'
+  s.ios.deployment_target = "8.1"
 
   s.source_files = 'Source/*.swift'
   s.resources = [
                  'Source/RMImages.xcassets/tick_selected.imageset/*.png',
-                 'Source/RMImages.xcassets/tick_deselected.imageset/*.png'
+                 'Source/RMImages.xcassets/tick_deselected.imageset/*.png',
+                 'Source/*.xib'
                 ]
   s.requires_arc = true
 

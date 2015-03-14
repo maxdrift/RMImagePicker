@@ -1,6 +1,6 @@
 //
 //  RMAlbumPickerController.swift
-//  iSafariClient
+//  RMImagePicker
 //
 //  Created by Riccardo Massari on 19/01/15.
 //  Copyright (c) 2015 Riccardo Massari. All rights reserved.
@@ -19,17 +19,26 @@ protocol RMAssetSelectionDelegate {
     func cancelImagePicker()
 }
 
+class UITableViewDetailCell: UITableViewCell {
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: .Subtitle, reuseIdentifier: reuseIdentifier)
+    }
+
+    required init(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+    }
+}
+
 class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
     var assetsParent: RMAssetSelectionDelegate?
     lazy var imageManager = PHCachingImageManager.defaultManager()
-    var collectionsFetchResult: PHFetchResult!
-    var posterImages: [UIImage] = []
+    var allCollections: [PHAssetCollection] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        self.tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: albumCellIdentifier)
-        self.tableView.separatorStyle = UITableViewCellSeparatorStyle.SingleLine
+        self.tableView.registerClass(UITableViewDetailCell.self, forCellReuseIdentifier: albumCellIdentifier)
+        self.tableView.separatorStyle = UITableViewCellSeparatorStyle.None
 
         self.navigationItem.title = NSLocalizedString("Photos", comment: "")
         let cancelButton = UIBarButtonItem(
@@ -40,8 +49,20 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
 
         let phFetchOptions = PHFetchOptions()
         phFetchOptions.predicate = NSPredicate(format: "estimatedAssetCount > 0")
-        self.collectionsFetchResult = PHAssetCollection.fetchAssetCollectionsWithType(PHAssetCollectionType.Album, subtype: PHAssetCollectionSubtype.Any, options: phFetchOptions)
-
+        PHAssetCollection.fetchAssetCollectionsWithType(
+            .SmartAlbum,
+            subtype: .SmartAlbumUserLibrary,
+            options: nil
+            ).enumerateObjectsUsingBlock { (collection, idx, _) -> Void in
+                self.allCollections.append(collection as PHAssetCollection)
+        }
+        PHAssetCollection.fetchAssetCollectionsWithType(
+            .Album,
+            subtype: .Any,
+            options: phFetchOptions
+            ).enumerateObjectsUsingBlock { (collection, idx, _) -> Void in
+                self.allCollections.append(collection as PHAssetCollection)
+        }
     }
 
     func cancelImagePicker() {
@@ -67,7 +88,7 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // Return the number of rows in the section.
-        return 1 + self.collectionsFetchResult.count
+        return self.allCollections.count
     }
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
@@ -78,27 +99,45 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
         cell.tag = currentTag
 
         // Configure the cell...
-        var localizedTitle: String
-        var assets: PHFetchResult
-        if indexPath.row == 0 {
-            assets = PHAsset.fetchAssetsWithOptions(nil)
-            localizedTitle = NSLocalizedString("Camera Roll", comment: "")
+        let collection = self.allCollections[indexPath.row]
+        var assetsCount: Int
+        var keyAssets: PHFetchResult!
+        if collection.assetCollectionType == .SmartAlbum {
+            let fetchOptions = PHFetchOptions()
+            fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            keyAssets = PHAsset.fetchAssetsInAssetCollection(collection, options: fetchOptions)
+            assetsCount = keyAssets.count
         } else {
-            let collection: PHAssetCollection! = self.collectionsFetchResult[indexPath.row - 1] as PHAssetCollection
-            assets = PHAsset.fetchKeyAssetsInAssetCollection(collection, options: nil)
-            localizedTitle = collection.localizedTitle
+            keyAssets = PHAsset.fetchKeyAssetsInAssetCollection(collection, options: nil)
+            assetsCount = collection.estimatedAssetCount
         }
         let requestOptions = PHImageRequestOptions()
         requestOptions.synchronous = true
+        let enumOptions = NSEnumerationOptions.Reverse
         var keyImages: [UIImage] = []
-        assets.enumerateObjectsUsingBlock({ (asset, idx, stop) -> Void in
+        keyAssets.enumerateObjectsUsingBlock({ (asset, idx, stop) -> Void in
             if idx > 1 {
                 stop.memory = true
             }
+            let cropSideLength = min(asset.pixelWidth, asset.pixelHeight)
+            let newOrigin = CGPoint(
+                x: (asset.pixelWidth - cropSideLength) / 2,
+                y: (asset.pixelHeight - cropSideLength) / 2
+            )
+            let square = CGRectMake(newOrigin.x, newOrigin.y, CGFloat(cropSideLength), CGFloat(cropSideLength))
+            let cropRect = CGRectApplyAffineTransform(
+                square,
+                CGAffineTransformMakeScale(
+                    1.0 / CGFloat(asset.pixelWidth),
+                    1.0 / CGFloat(asset.pixelHeight))
+            )
+            requestOptions.resizeMode = .Exact
+            requestOptions.normalizedCropRect = cropRect
+
             self.imageManager.requestImageForAsset(
                 asset as PHAsset,
-                targetSize: CGSizeMake(70, 70),
-                contentMode: PHImageContentMode.AspectFit,
+                targetSize: CGSizeMake(139, 139),
+                contentMode: .AspectFill,
                 options: requestOptions,
                 resultHandler: { (image, info) -> Void in
                     keyImages.append(image)
@@ -106,30 +145,39 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
         })
         //  Only update the thumbnail if the cell tag hasn't changed. Otherwise, the cell has been re-used.
         if (cell.tag == currentTag) {
-            cell.imageView!.image = self.mergeImages(keyImages, toImageWithSize: CGSizeMake(69.5, 73.5), andOffset: 2)
+            cell.textLabel?.text = collection.localizedTitle
+            cell.detailTextLabel?.text = "\(assetsCount)"
+            cell.imageView!.image = self.mergeImages(
+                keyImages,
+                toImageWithSize: CGSizeMake(69.5, 73.5),
+                andOffset: 2
+            )
+            cell.accessoryType = .DisclosureIndicator
         }
-        cell.textLabel?.text = localizedTitle
-        cell.accessoryType = UITableViewCellAccessoryType.DisclosureIndicator
 
         return cell
     }
 
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        let picker = RMAssetCollectionPicker()
-        picker.assetsParent = self
-
         let phFetchOptions = PHFetchOptions()
         phFetchOptions.predicate = NSPredicate(format: "mediaType = %i", PHAssetMediaType.Image.rawValue)
-        if indexPath.row == 0 {
-            phFetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
-            picker.assetsFetchResult = PHAsset.fetchAssetsWithOptions(phFetchOptions)
-        } else {
-            let collection: PHAssetCollection! = self.collectionsFetchResult[indexPath.row - 1] as PHAssetCollection
-            picker.assetsFetchResult = PHAsset.fetchAssetsInAssetCollection(collection, options: phFetchOptions)
-            picker.assetsCollection = collection
-        }
+        let collection = self.allCollections[indexPath.row]
+        let assets = PHAsset.fetchAssetsInAssetCollection(collection, options: phFetchOptions)
+        if assets.count > 0 {
+            let picker = RMAssetCollectionPicker()
+            picker.assetsParent = self
 
-        self.navigationController?.pushViewController(picker, animated: true)
+            picker.assetsFetchResult = assets
+            picker.assetCollection = collection
+
+            self.navigationController?.pushViewController(picker, animated: true)
+        } else {
+            let placeholderVC = UIViewController(
+                nibName: "RMPlaceholderView",
+                bundle: NSBundle(forClass: RMAlbumPickerController.self)
+            )
+            self.navigationController?.pushViewController(placeholderVC, animated: true)
+        }
     }
 
     override func tableView(tableView: UITableView, heightForRowAtIndexPath indexPath: NSIndexPath) -> CGFloat {
@@ -145,7 +193,8 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
 // MARK: - Utility
 
     func mergeImages(images: [UIImage!], toImageWithSize size: CGSize, andOffset offset: CGFloat) -> UIImage! {
-        UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
+        UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+        let context = UIGraphicsGetCurrentContext()
 
         var idxDec: CGFloat = CGFloat(images.count - 1)
         var idxInc: CGFloat = 0
@@ -159,7 +208,6 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
             let rect = CGRect(origin: newOrigin, size: newSize)
             img.drawInRect(rect)
 
-            let context = UIGraphicsGetCurrentContext();
             CGContextSetShouldAntialias(context, false)
             CGContextSetStrokeColorWithColor(context, UIColor.whiteColor().CGColor)
             CGContextStrokeRectWithWidth(context, rect, 0.5)

@@ -1,6 +1,6 @@
 //
 //  RMImagePickerController.swift
-//  iSafariClient
+//  RMImagePicker
 //
 //  Created by Riccardo Massari on 19/01/15.
 //  Copyright (c) 2015 Riccardo Massari. All rights reserved.

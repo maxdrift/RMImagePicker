@@ -1,6 +1,6 @@
 //
 //  RMAssetCell.swift
-//  iSafariClient
+//  RMImagePicker
 //
 //  Created by Riccardo Massari on 22/01/15.
 //  Copyright (c) 2015 Riccardo Massari. All rights reserved.
@@ -8,11 +8,11 @@
 
 import UIKit
 
-private let SelectedOverlayImg = UIImage(
+let SelectedOverlayImg = UIImage(
     named: "tick_selected",
     inBundle: NSBundle(forClass: RMImagePickerController.self),
     compatibleWithTraitCollection: nil)
-private let DeselectedOverlayImg = UIImage(
+let DeselectedOverlayImg = UIImage(
     named: "tick_deselected",
     inBundle: NSBundle(forClass: RMImagePickerController.self),
     compatibleWithTraitCollection: nil)
@@ -33,18 +33,14 @@ class RMAssetCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         self.imageView.frame = self.bounds
+        self.imageView.contentMode = .ScaleAspectFill
+        self.imageView.clipsToBounds = true
         self.contentView.addSubview(self.imageView)
         self.overlayView.frame = self.bounds
         self.contentView.addSubview(self.overlayView)
-        self.selected = false
     }
 
     required init(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
-    }
-
-    override func awakeFromNib() {
-        super.awakeFromNib()
-        // Initialization code
     }
 }
