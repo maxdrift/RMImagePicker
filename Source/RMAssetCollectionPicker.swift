@@ -11,6 +11,9 @@ import AssetsLibrary
 import Photos
 
 let reuseIdentifier = "assetCellId"
+let AssetsPerRow = CGFloat(4.0)
+let AssetsSpacing = CGFloat(1.0)
+let AssetsInset = CGFloat(9.0)
 var AssetGridThumbnailSize: CGSize!
 
 extension NSIndexSet {
@@ -35,8 +38,9 @@ extension UICollectionView {
 }
 
 
-class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeObserver {
+class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeObserver, UICollectionViewDelegateFlowLayout {
     var previousPreheatRect: CGRect?
+    var alreadyScrolled = false
     var assetsParent: RMAssetSelectionDelegate?
     var imageManager: PHCachingImageManager!
     var assetsFetchResult: PHFetchResult!
@@ -51,10 +55,9 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
     convenience override init() {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = UICollectionViewScrollDirection.Vertical
-        layout.itemSize = CGSize(width: 77, height: 77)
-        layout.minimumInteritemSpacing = 3.0
-        layout.minimumLineSpacing = 3.0
-        layout.sectionInset = UIEdgeInsets(top: 9.0, left: 0, bottom: 9.0, right: 0)
+        layout.minimumInteritemSpacing = AssetsSpacing
+        layout.minimumLineSpacing = AssetsSpacing
+        layout.sectionInset = UIEdgeInsets(top: AssetsInset, left: 0, bottom: AssetsInset, right: 0)
         self.init(collectionViewLayout: layout)
     }
 
@@ -112,6 +115,15 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
             action: "deselectAllAction:"
         )
         self.toolbarItems = [selectAllItem, flexibleItem, flexibleItem, deselectAllItem]
+
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if !self.alreadyScrolled {
+            self.collectionView?.scrollToItemAtIndexPath(NSIndexPath(forItem: self.assetsFetchResult.count - 1, inSection: 0), atScrollPosition: .Top, animated: false)
+            self.alreadyScrolled = true
+        }
     }
 
     override func didReceiveMemoryWarning() {
@@ -129,7 +141,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         super.viewDidDisappear(animated)
     }
 
-// MARK: - UICollectionViewDataSource
+    // MARK: - UICollectionViewDataSource
 
     override func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
         return 1
@@ -148,14 +160,12 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         cell.tag = currentTag
 
         let asset: PHAsset! = self.assetsFetchResult[indexPath.item] as PHAsset
-
         self.imageManager.requestImageForAsset(
             asset,
             targetSize: AssetGridThumbnailSize,
             contentMode: PHImageContentMode.AspectFill,
             options: nil,
             resultHandler: { (result, info) in
-            // Only update the thumbnail if the cell tag hasn't changed. Otherwise, the cell has been re-used.
                 if (cell.tag == currentTag) {
                     cell.imageView.image = result
                     if cell.selected {
@@ -164,7 +174,6 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
                         cell.overlayView.image = DeselectedOverlayImg
                     }
                 }
-
             }
         )
         return cell
@@ -178,7 +187,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         self.selectedAssetsNumber! -= 1
     }
 
-// MARK: - PHPhotoLibraryChangeObserver
+    // MARK: - PHPhotoLibraryChangeObserver
 
     func photoLibraryDidChange(changeInstance: PHChange!) {
         // Call might come on any background queue. Re-dispatch to the main queue to handle it.
@@ -211,13 +220,13 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         })
     }
 
-// MARK: - UIScrollViewDelegate
+    // MARK: - UIScrollViewDelegate
 
     override func scrollViewDidScroll(scrollView: UIScrollView) {
         self.updateCachedAssets()
     }
 
-// MARK: - Asset Caching
+    // MARK: - Asset Caching
 
     func resetCachedAssets() {
         self.imageManager.stopCachingImagesForAllAssets()
@@ -244,9 +253,9 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
                 self.computeDifferenceBetweenRect(self.previousPreheatRect!, andRect: preheatRect, removedHandler: { (removedRect) -> Void in
                     let indexPaths = self.collectionView!.rm_indexPathsForElementsInRect(removedRect)
                     removedIndexPaths.extend(indexPaths)
-                }, addedHandler: { (addedRect) -> Void in
-                    let indexPaths = self.collectionView!.rm_indexPathsForElementsInRect(addedRect)
-                    addedIndexPaths.extend(indexPaths)
+                    }, addedHandler: { (addedRect) -> Void in
+                        let indexPaths = self.collectionView!.rm_indexPathsForElementsInRect(addedRect)
+                        addedIndexPaths.extend(indexPaths)
                 })
 
                 let assetsToStartCaching = self.assetsAtIndexPaths(addedIndexPaths)
@@ -303,7 +312,14 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         return assets
     }
 
-// MARK: - Actions
+    // MARK: - UICollectionViewDelegateFlowLayout
+
+    func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
+        let itemSize = ((collectionView.bounds.width - (AssetsSpacing * (AssetsPerRow - 1))) / AssetsPerRow)
+        return CGSize(width: itemSize, height: itemSize)
+    }
+
+    // MARK: - Actions
 
     func selectAllAction(sender: AnyObject) {
         for i in 0..<self.assetsFetchResult.count {
@@ -326,11 +342,11 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         }
         assetsParent?.selectedAssets(selectedAssets)
     }
-
-// MARK: - Utility
-
+    
+    // MARK: - Utility
+    
     func updateNavigationTitle() {
         self.navigationItem.title = self.baseNavigationTitle + " (\(self.selectedAssetsNumber))"
     }
-
+    
 }
