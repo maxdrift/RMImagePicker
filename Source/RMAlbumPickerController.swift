@@ -10,8 +10,7 @@ import UIKit
 import Photos
 
 let albumCellIdentifier = "albumCellId"
-let assetsInPosterImage: Int = 3
-let albumRowHeigth = CGFloat(86.5)
+let albumRowHeigth = CGFloat(173)
 
 
 protocol RMAssetSelectionDelegate {
@@ -37,10 +36,11 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        self.tableView.registerClass(UITableViewDetailCell.self, forCellReuseIdentifier: albumCellIdentifier)
+        let cellNib = UINib(nibName: "RMAlbumCell", bundle: NSBundle(forClass: RMAlbumPickerController.self))
+        self.tableView.registerNib(cellNib, forCellReuseIdentifier: albumCellIdentifier)
         self.tableView.separatorStyle = UITableViewCellSeparatorStyle.None
 
-        self.navigationItem.title = NSLocalizedString("Photos", comment: "")
+        self.navigationItem.title = NSLocalizedString("Albums", comment: "")
         let cancelButton = UIBarButtonItem(
             barButtonSystemItem: .Cancel,
             target: self,
@@ -92,7 +92,12 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
     }
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier(albumCellIdentifier, forIndexPath: indexPath) as UITableViewCell
+        var cell: RMAlbumCell!
+        if let reCell = tableView.dequeueReusableCellWithIdentifier(albumCellIdentifier, forIndexPath: indexPath) as? RMAlbumCell {
+            cell = reCell
+        } else {
+            cell = NSBundle(forClass: RMAlbumPickerController.self).loadNibNamed("RMAlbumCell", owner: self, options: nil)[0] as RMAlbumCell
+        }
 
         // Increment the cell's tag
         let currentTag = cell.tag + 1
@@ -111,48 +116,30 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
             keyAssets = PHAsset.fetchKeyAssetsInAssetCollection(collection, options: nil)
             assetsCount = collection.estimatedAssetCount
         }
-        let requestOptions = PHImageRequestOptions()
-        requestOptions.synchronous = true
-        let enumOptions = NSEnumerationOptions.Reverse
-        var keyImages: [UIImage] = []
-        keyAssets.enumerateObjectsUsingBlock({ (asset, idx, stop) -> Void in
-            if idx > 1 {
-                stop.memory = true
+        let scale = UIScreen.mainScreen().scale
+        let imageWidth = cell.poster1.bounds.width * scale
+        let imageHeight = cell.poster1.bounds.height * scale
+        for (idx, poster) in enumerate(cell.posterImgs) {
+            if idx < keyAssets.count {
+                self.imageManager.requestImageForAsset(
+                    keyAssets[idx] as PHAsset,
+                    targetSize: CGSizeMake(imageWidth, imageHeight),
+                    contentMode: .AspectFill,
+                    options: nil,
+                    resultHandler: { (image, info) -> Void in
+                        if (cell.tag == currentTag) {
+                            poster.image = image
+                        }
+                })
+            } else {
+                if (cell.tag == currentTag) {
+                    poster.image = nil
+                }
             }
-            let cropSideLength = min(asset.pixelWidth, asset.pixelHeight)
-            let newOrigin = CGPoint(
-                x: (asset.pixelWidth - cropSideLength) / 2,
-                y: (asset.pixelHeight - cropSideLength) / 2
-            )
-            let square = CGRectMake(newOrigin.x, newOrigin.y, CGFloat(cropSideLength), CGFloat(cropSideLength))
-            let cropRect = CGRectApplyAffineTransform(
-                square,
-                CGAffineTransformMakeScale(
-                    1.0 / CGFloat(asset.pixelWidth),
-                    1.0 / CGFloat(asset.pixelHeight))
-            )
-            requestOptions.resizeMode = .Exact
-            requestOptions.normalizedCropRect = cropRect
-
-            self.imageManager.requestImageForAsset(
-                asset as PHAsset,
-                targetSize: CGSizeMake(139, 139),
-                contentMode: .AspectFill,
-                options: requestOptions,
-                resultHandler: { (image, info) -> Void in
-                    keyImages.append(image)
-            })
-        })
-        //  Only update the thumbnail if the cell tag hasn't changed. Otherwise, the cell has been re-used.
+        }
         if (cell.tag == currentTag) {
-            cell.textLabel?.text = collection.localizedTitle
-            cell.detailTextLabel?.text = "\(assetsCount)"
-            cell.imageView!.image = self.mergeImages(
-                keyImages,
-                toImageWithSize: CGSizeMake(69.5, 73.5),
-                andOffset: 2
-            )
-            cell.accessoryType = .DisclosureIndicator
+            cell.title.text = collection.localizedTitle
+            cell.count.text = "\(assetsCount)"
         }
 
         return cell
@@ -181,45 +168,13 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
     }
 
     override func tableView(tableView: UITableView, heightForRowAtIndexPath indexPath: NSIndexPath) -> CGFloat {
-        return albumRowHeigth
+        return albumRowHeigth / UIScreen.mainScreen().scale
     }
 
-// MARK: - RMAssetSelectionDelegate
-
+    // MARK: - RMAssetSelectionDelegate
+    
     func selectedAssets(assets: [PHAsset]) {
         self.assetsParent?.selectedAssets(assets)
     }
-
-// MARK: - Utility
-
-    func mergeImages(images: [UIImage!], toImageWithSize size: CGSize, andOffset offset: CGFloat) -> UIImage! {
-        UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
-        let context = UIGraphicsGetCurrentContext()
-
-        var idxDec: CGFloat = CGFloat(images.count - 1)
-        var idxInc: CGFloat = 0
-        for img in images.reverse() {
-            let newOrigin = CGPoint(x: idxDec * offset, y: idxInc * offset + 0.5)
-            let newWidth = size.width - (offset * 2 * idxDec) - 0.5
-            let newSize = CGSize(
-                width: newWidth,
-                height: newWidth
-            )
-            let rect = CGRect(origin: newOrigin, size: newSize)
-            img.drawInRect(rect)
-
-            CGContextSetShouldAntialias(context, false)
-            CGContextSetStrokeColorWithColor(context, UIColor.whiteColor().CGColor)
-            CGContextStrokeRectWithWidth(context, rect, 0.5)
-            CGContextSetShouldAntialias(context, true)
-            idxInc++
-            idxDec--
-        }
-
-        let mergedImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        return mergedImage
-    }
-
+    
 }
