@@ -15,7 +15,7 @@ it, simply add the following line to your Podfile:
 
 ```
 use_frameworks!
-pod "RMImagePicker", "~> 0.1.2"
+pod "RMImagePicker", "~> 0.1.3"
 ```
 
 ## Author
