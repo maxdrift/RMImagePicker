@@ -1,4 +1,4 @@
-# RMImagePicker
+# RMImagePicker [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/maxdrift/RMImagePicker/master/LICENSE) [![CocoaPods Platform](https://img.shields.io/cocoapods/p/RMImagePicker.svg)](http://cocoapods.org/pods/RMImagePicker) [![CocoaPods Version](https://img.shields.io/cocoapods/v/RMImagePicker.svg)](http://cocoapods.org/pods/RMImagePicker)
 iOS image picker with single and multiple selection written in Swift using Apple PhotoKit
 
 ## Usage
@@ -15,7 +15,7 @@ it, simply add the following line to your Podfile:
 
 ```
 use_frameworks!
-pod "RMImagePicker", "~> 0.1.3"
+pod "RMImagePicker", "~> 0.1.4"
 ```
 
 ## Author

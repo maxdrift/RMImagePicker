@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "RMImagePicker"
-  s.version          = "0.1.3"
+  s.version          = "0.1.4"
   s.summary          = "iOS image picker with single and multiple selection written in Swift using Apple PhotoKit."
   s.description      = <<-DESC
                        iOS image picker with single and multiple selection
