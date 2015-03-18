@@ -28,10 +28,10 @@ class UITableViewDetailCell: UITableViewCell {
     }
 }
 
-class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
+class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate, UIAlertViewDelegate, PHPhotoLibraryChangeObserver {
     var assetsParent: RMAssetSelectionDelegate?
     lazy var imageManager = PHCachingImageManager.defaultManager()
-    var allCollections: [PHAssetCollection] = []
+    var allCollections: [PHFetchResult] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -47,22 +47,26 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
             action: "cancelImagePicker")
         self.navigationItem.rightBarButtonItem = cancelButton
 
+        PHPhotoLibrary.sharedPhotoLibrary().registerChangeObserver(self)
+
+        self.checkPhotoAuth()
+
         let phFetchOptions = PHFetchOptions()
         phFetchOptions.predicate = NSPredicate(format: "estimatedAssetCount > 0")
-        PHAssetCollection.fetchAssetCollectionsWithType(
-            .SmartAlbum,
-            subtype: .SmartAlbumUserLibrary,
-            options: nil
-            ).enumerateObjectsUsingBlock { (collection, idx, _) -> Void in
-                self.allCollections.append(collection as PHAssetCollection)
-        }
-        PHAssetCollection.fetchAssetCollectionsWithType(
-            .Album,
-            subtype: .Any,
-            options: phFetchOptions
-            ).enumerateObjectsUsingBlock { (collection, idx, _) -> Void in
-                self.allCollections.append(collection as PHAssetCollection)
-        }
+        self.allCollections.append(
+            PHAssetCollection.fetchAssetCollectionsWithType(
+                .SmartAlbum,
+                subtype: .SmartAlbumUserLibrary,
+                options: nil
+            )
+        )
+        self.allCollections.append(
+            PHAssetCollection.fetchAssetCollectionsWithType(
+                .Album,
+                subtype: .Any,
+                options: phFetchOptions
+            )
+        )
     }
 
     func cancelImagePicker() {
@@ -74,6 +78,11 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
         self.navigationController?.setToolbarHidden(true, animated: true)
     }
 
+    override func viewDidDisappear(animated: Bool) {
+        PHPhotoLibrary.sharedPhotoLibrary().unregisterChangeObserver(self)
+        super.viewDidDisappear(animated)
+    }
+
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
@@ -83,12 +92,12 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
 
     override func numberOfSectionsInTableView(tableView: UITableView) -> Int {
         // Return the number of sections.
-        return 1
+        return self.allCollections.count
     }
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // Return the number of rows in the section.
-        return self.allCollections.count
+        return self.allCollections[section].count
     }
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
@@ -104,7 +113,7 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
         cell.tag = currentTag
 
         // Configure the cell...
-        let collection = self.allCollections[indexPath.row]
+        let collection = self.allCollections[indexPath.section][indexPath.row] as PHAssetCollection
         var assetsCount: Int
         var keyAssets: PHFetchResult!
         if collection.assetCollectionType == .SmartAlbum {
@@ -148,7 +157,7 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         let phFetchOptions = PHFetchOptions()
         phFetchOptions.predicate = NSPredicate(format: "mediaType = %i", PHAssetMediaType.Image.rawValue)
-        let collection = self.allCollections[indexPath.row]
+        let collection = self.allCollections[indexPath.section][indexPath.row] as PHAssetCollection
         let assets = PHAsset.fetchAssetsInAssetCollection(collection, options: phFetchOptions)
         if assets.count > 0 {
             let picker = RMAssetCollectionPicker()
@@ -171,10 +180,85 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate {
         return albumRowHeigth / UIScreen.mainScreen().scale
     }
 
+    // MARK: - PHPhotoLibraryChangeObserver
+
+    func photoLibraryDidChange(changeInstance: PHChange!) {
+        // Call might come on any background queue. Re-dispatch to the main queue to handle it.
+        dispatch_async(dispatch_get_main_queue(), { () -> Void in
+            // check if there are changes to the assets (insertions, deletions, updates)
+            for (idx, fetchResult) in enumerate(self.allCollections) {
+                if let collectionChanges = changeInstance.changeDetailsForFetchResult(fetchResult) {
+                    // get the new fetch result
+                    self.allCollections[idx] = collectionChanges.fetchResultAfterChanges
+                    if let tableView = self.tableView {
+                        if (!collectionChanges.hasIncrementalChanges || collectionChanges.hasMoves) {
+                            // we need to reload all if the incremental diffs are not available
+                            tableView.reloadData()
+                        } else {
+                            // if we have incremental diffs, tell the collection view to animate insertions and deletions
+                            self.tableView.beginUpdates()
+                            if let removedIndexes = collectionChanges.removedIndexes {
+                                tableView.deleteRowsAtIndexPaths(removedIndexes.rm_indexPathsFromIndexesWithSection(idx), withRowAnimation: .Automatic)
+                            }
+                            if let insertedIndexes = collectionChanges.insertedIndexes {
+                                tableView.insertRowsAtIndexPaths(insertedIndexes.rm_indexPathsFromIndexesWithSection(idx), withRowAnimation: .Automatic)
+                            }
+                            if let changedIndexes = collectionChanges.changedIndexes {
+                                tableView.reloadRowsAtIndexPaths(changedIndexes.rm_indexPathsFromIndexesWithSection(idx), withRowAnimation: .Automatic)
+                            }
+                            self.tableView.endUpdates()
+                        }
+                    }
+                }
+            }
+        })
+    }
+
     // MARK: - RMAssetSelectionDelegate
     
     func selectedAssets(assets: [PHAsset]) {
         self.assetsParent?.selectedAssets(assets)
     }
-    
+
+    // MARK: - UIAlertViewDelegate
+
+    func alertView(alertView: UIAlertView, clickedButtonAtIndex buttonIndex: Int) {
+        if buttonIndex == 1 {
+            UIApplication.sharedApplication().openURL(NSURL(string: UIApplicationOpenSettingsURLString)!)
+        }
+        self.cancelImagePicker()
+    }
+
+    // MARK: - Utility
+
+    func checkPhotoAuth() {
+        PHPhotoLibrary.requestAuthorization { (status) -> Void in
+            switch status {
+            case .Restricted:
+                dispatch_async(dispatch_get_main_queue(), { () -> Void in
+                    let photoAuthAlert = UIAlertView(
+                        title: NSLocalizedString("Access restricted", comment: "to the photo library"),
+                        message: NSLocalizedString("This application needs access to your photo library but it seems that you're not authorized to grant this permission.  Please contact someone who has higher privileges on the device.", comment: ""),
+                        delegate: self,
+                        cancelButtonTitle: NSLocalizedString("OK", comment: "")
+                    )
+                    photoAuthAlert.show()
+                })
+            case .Denied:
+                dispatch_async(dispatch_get_main_queue(), { () -> Void in
+                    let photoAuthAlert = UIAlertView(
+                        title: NSLocalizedString("Please allow access", comment: "to the photo library"),
+                        message: NSLocalizedString("This application needs access to your photo library. Please go to Settings > Privacy > Photos and switch this application to ON", comment: ""),
+                        delegate: self,
+                        cancelButtonTitle: NSLocalizedString("OK", comment: ""),
+                        otherButtonTitles: NSLocalizedString("Settings", comment: "")
+                    )
+                    photoAuthAlert.show()
+                })
+            default:
+                break
+            }
+        }
+    }
+
 }
