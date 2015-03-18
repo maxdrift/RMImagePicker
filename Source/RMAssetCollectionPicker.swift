@@ -11,7 +11,8 @@ import AssetsLibrary
 import Photos
 
 let reuseIdentifier = "assetCellId"
-let AssetsPerRow = CGFloat(4.0)
+let AssetsPerRowPort = CGFloat(4.0)
+let AssetsPerRowLand = CGFloat(7.0)
 let AssetsSpacing = CGFloat(1.0)
 let AssetsInset = CGFloat(9.0)
 var AssetGridThumbnailSize: CGSize!
@@ -72,8 +73,6 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         super.init(coder: aDecoder)
     }
 
-
-
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -116,6 +115,11 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         )
         self.toolbarItems = [selectAllItem, flexibleItem, flexibleItem, deselectAllItem]
 
+    }
+
+    override func didRotateFromInterfaceOrientation(fromInterfaceOrientation: UIInterfaceOrientation) {
+        let invContext = self.collectionViewLayout.invalidationContextForBoundsChange(self.collectionView!.bounds)
+        self.collectionViewLayout.invalidateLayoutWithContext(invContext)
     }
 
     override func viewDidLayoutSubviews() {
@@ -315,7 +319,9 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
     // MARK: - UICollectionViewDelegateFlowLayout
 
     func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
-        let itemSize = ((collectionView.bounds.width - (AssetsSpacing * (AssetsPerRow - 1))) / AssetsPerRow)
+        let orientation = UIApplication.sharedApplication().statusBarOrientation
+        let assetsPerRow = self.assetsPerRowFromOrientation(orientation)
+        let itemSize = ((collectionView.bounds.width - (AssetsSpacing * (assetsPerRow - 1))) / assetsPerRow)
         return CGSize(width: itemSize, height: itemSize)
     }
 
@@ -348,5 +354,16 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
     func updateNavigationTitle() {
         self.navigationItem.title = self.baseNavigationTitle + " (\(self.selectedAssetsNumber))"
     }
-    
+
+    func assetsPerRowFromOrientation(orientation: UIInterfaceOrientation) -> CGFloat {
+        var assetsPerRow: CGFloat
+        switch orientation {
+        case .Unknown, .Portrait, .PortraitUpsideDown:
+            assetsPerRow = AssetsPerRowPort
+        case .LandscapeLeft, .LandscapeRight:
+            assetsPerRow = AssetsPerRowLand
+        }
+        return assetsPerRow
+    }
+
 }
