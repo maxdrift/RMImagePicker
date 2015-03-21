@@ -1,6 +1,10 @@
 # RMImagePicker [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/maxdrift/RMImagePicker/master/LICENSE) [![CocoaPods Platform](https://img.shields.io/cocoapods/p/RMImagePicker.svg)](http://cocoapods.org/pods/RMImagePicker) [![CocoaPods Version](https://img.shields.io/cocoapods/v/RMImagePicker.svg)](http://cocoapods.org/pods/RMImagePicker)
 iOS image picker with single and multiple selection written in Swift using Apple PhotoKit
 
+## Screenshots
+
+![Albums view screenshot](https://github.com/maxdrift/RMImagePicker/blob/add-screenshots/Screenshots/screen1.png) ![Assets view screenshot](https://github.com/maxdrift/RMImagePicker/blob/add-screenshots/Screenshots/screen2.png)
+
 ## Usage
 
 To run the example project, clone the repo, and run `pod install` from the Example directory first.
