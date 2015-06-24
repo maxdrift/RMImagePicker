@@ -105,7 +105,7 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate, 
         if let reCell = tableView.dequeueReusableCellWithIdentifier(albumCellIdentifier, forIndexPath: indexPath) as? RMAlbumCell {
             cell = reCell
         } else {
-            cell = NSBundle(forClass: RMAlbumPickerController.self).loadNibNamed("RMAlbumCell", owner: self, options: nil)[0] as RMAlbumCell
+            cell = NSBundle(forClass: RMAlbumPickerController.self).loadNibNamed("RMAlbumCell", owner: self, options: nil)[0] as! RMAlbumCell
         }
 
         // Increment the cell's tag
@@ -113,7 +113,7 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate, 
         cell.tag = currentTag
 
         // Configure the cell...
-        let collection = self.allCollections[indexPath.section][indexPath.row] as PHAssetCollection
+        let collection = self.allCollections[indexPath.section][indexPath.row] as! PHAssetCollection
         var assetsCount: Int
         var keyAssets: PHFetchResult!
         if collection.assetCollectionType == .SmartAlbum {
@@ -131,7 +131,7 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate, 
         for (idx, poster) in enumerate(cell.posterImgs) {
             if idx < keyAssets.count {
                 self.imageManager.requestImageForAsset(
-                    keyAssets[idx] as PHAsset,
+                    keyAssets[idx] as! PHAsset,
                     targetSize: CGSizeMake(imageWidth, imageHeight),
                     contentMode: .AspectFill,
                     options: nil,
@@ -157,7 +157,7 @@ class RMAlbumPickerController: UITableViewController, RMAssetSelectionDelegate, 
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         let phFetchOptions = PHFetchOptions()
         phFetchOptions.predicate = NSPredicate(format: "mediaType = %i", PHAssetMediaType.Image.rawValue)
-        let collection = self.allCollections[indexPath.section][indexPath.row] as PHAssetCollection
+        let collection = self.allCollections[indexPath.section][indexPath.row] as! PHAssetCollection
         let assets = PHAsset.fetchAssetsInAssetCollection(collection, options: phFetchOptions)
         if assets.count > 0 {
             let picker = RMAssetCollectionPicker()

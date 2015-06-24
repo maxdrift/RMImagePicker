@@ -53,7 +53,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         }
     }
 
-    convenience override init() {
+    convenience init() {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = UICollectionViewScrollDirection.Vertical
         layout.minimumInteritemSpacing = AssetsSpacing
@@ -62,7 +62,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         self.init(collectionViewLayout: layout)
     }
 
-    override init(collectionViewLayout layout: UICollectionViewLayout!) {
+    override init(collectionViewLayout layout: UICollectionViewLayout) {
         super.init(collectionViewLayout: layout)
         self.imageManager = PHCachingImageManager()
         self.resetCachedAssets()
@@ -82,7 +82,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         self.collectionView?.allowsMultipleSelection = true
 
         let scale = UIScreen.mainScreen().scale
-        let cellSize = (self.collectionViewLayout as UICollectionViewFlowLayout).itemSize
+        let cellSize = (self.collectionViewLayout as! UICollectionViewFlowLayout).itemSize
         AssetGridThumbnailSize = CGSize(width: cellSize.width * scale, height: cellSize.height * scale)
 
         let doneButtonItem = UIBarButtonItem(
@@ -103,13 +103,13 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
         )
         let selectAllItem = UIBarButtonItem(
             title: NSLocalizedString("Select all", comment: ""),
-            style: UIBarButtonItemStyle.Bordered,
+            style: UIBarButtonItemStyle.Plain,
             target: self,
             action: "selectAllAction:"
         )
         let deselectAllItem = UIBarButtonItem(
             title: NSLocalizedString("Deselect all", comment: ""),
-            style: UIBarButtonItemStyle.Bordered,
+            style: UIBarButtonItemStyle.Plain,
             target: self,
             action: "deselectAllAction:"
         )
@@ -157,13 +157,13 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
     }
 
     override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath: indexPath) as RMAssetCell
+        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath: indexPath) as! RMAssetCell
 
         // Increment the cell's tag
         let currentTag = cell.tag + 1
         cell.tag = currentTag
 
-        let asset: PHAsset! = self.assetsFetchResult[indexPath.item] as PHAsset
+        let asset: PHAsset! = self.assetsFetchResult[indexPath.item] as! PHAsset
         self.imageManager.requestImageForAsset(
             asset,
             targetSize: AssetGridThumbnailSize,
@@ -311,7 +311,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
     func assetsAtIndexPaths(indexPaths: [NSIndexPath]) -> [PHAsset] {
         var assets: [PHAsset] = []
         for indexPath in indexPaths {
-            assets.append(self.assetsFetchResult[indexPath.item] as PHAsset)
+            assets.append(self.assetsFetchResult[indexPath.item] as! PHAsset)
         }
         return assets
     }
@@ -344,7 +344,7 @@ class RMAssetCollectionPicker: UICollectionViewController, PHPhotoLibraryChangeO
     func doneAction(sender: AnyObject) {
         var selectedAssets: [PHAsset] = []
         for ip in self.collectionView!.indexPathsForSelectedItems() {
-            selectedAssets.append(self.assetsFetchResult[ip.item] as PHAsset)
+            selectedAssets.append(self.assetsFetchResult[ip.item] as! PHAsset)
         }
         assetsParent?.selectedAssets(selectedAssets)
     }

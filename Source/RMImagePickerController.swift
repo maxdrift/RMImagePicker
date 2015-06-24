@@ -22,7 +22,7 @@ public class RMImagePickerController: UINavigationController, RMAssetSelectionDe
         super.init(rootViewController: rootViewController)
     }
 
-    public override convenience init() {
+    public convenience init() {
         var albumController = RMAlbumPickerController()
         self.init(rootViewController: albumController)
         albumController.assetsParent = self
