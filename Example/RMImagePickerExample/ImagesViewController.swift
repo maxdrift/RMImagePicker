@@ -53,7 +53,7 @@ class ImagesViewController: UICollectionViewController, RMImagePickerControllerD
     }
 
     override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath: indexPath) as UICollectionViewCell
+        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath: indexPath) as! UICollectionViewCell
 
         // Configure the cell
         let asset = self.assets[indexPath.item]
@@ -63,7 +63,7 @@ class ImagesViewController: UICollectionViewController, RMImagePickerControllerD
             contentMode: PHImageContentMode.AspectFit,
             options: nil,
             resultHandler: { (image, info) -> Void in
-                let imageView = cell.viewWithTag(cellImageViewTag) as UIImageView
+                let imageView = cell.viewWithTag(cellImageViewTag) as! UIImageView
                 imageView.image = image
         })
         return cell
