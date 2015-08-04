@@ -9,20 +9,24 @@
 import UIKit
 import Photos
 
-public protocol RMImagePickerControllerDelegate: UINavigationControllerDelegate {
+@objc public protocol RMImagePickerControllerDelegate: UINavigationControllerDelegate {
     func rmImagePickerController(picker: RMImagePickerController, didFinishPickingAssets assets: [PHAsset])
     func rmImagePickerControllerDidCancel(picker: RMImagePickerController)
+    optional func rmWarnMaximumOfImages(picker: UICollectionViewController)
 }
 
 public class RMImagePickerController: UINavigationController, RMAssetSelectionDelegate {
-    public var pickerDelegate: RMImagePickerControllerDelegate?
+    public weak var pickerDelegate: RMImagePickerControllerDelegate?
+    public var maxImagesToPick: Int = 0
     var albumController: RMAlbumPickerController?
-
+    
+    var maxImages: Int { return maxImagesToPick }
+    
     override init(rootViewController: UIViewController) {
         super.init(rootViewController: rootViewController)
     }
 
-    public override convenience init() {
+    public convenience init() {
         var albumController = RMAlbumPickerController()
         self.init(rootViewController: albumController)
         albumController.assetsParent = self
@@ -64,4 +68,8 @@ public class RMImagePickerController: UINavigationController, RMAssetSelectionDe
         }
     }
 
+    func showMessage(picker: UICollectionViewController){
+        self.pickerDelegate?.rmWarnMaximumOfImages?(picker)
+    }
+    
 }
